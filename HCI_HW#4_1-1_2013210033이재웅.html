@@ -1,0 +1,179 @@
+<!-- 
+  Assignment 1-1.
+
+  Construct and implement the following GUI elements
+  using HTML/JS and Canvas 2D graphics elements
+  (all displayable on the web browser canvas screen space):
+    - Resizable rectangular window with a title and "X" (remove), and "-" (hide) buttons
+      Resizable text box with a label and other simple properties
+      (e.g. font, size of text, ...)
+    - Resizable button with a label and other simple properties
+      (e.g. font, size of text, ...)
+      Pull down menu with simple and basic properties
+      (e.g. menu title, menu item list, size, ...)
+
+  For instance, you must define a set of GUI APIs
+  such as "create_window(ID, position_x, position_y, width, height, title)"
+  that can be called from the script to display a simple GUI window.
+
+  Use the simple API to create a content such as shown below.
+
+  Objects may not be interactable at this point.
+
+  Just draw them.
+-->
+
+<!doctype html>
+<html>
+<head>
+  <title>HCI</title>
+  <link href="https://unpkg.com/ionicons@4.4.6/dist/css/ionicons.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Noto+Sans+KR" rel="stylesheet">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+
+      margin: 0px;
+      padding: 0px;
+
+      background-color: #f0f0f0;
+    }
+  </style>
+</head>
+<body>
+
+<style>
+  .main-canvas {
+    position: fixed;
+
+    top: calc(50% - 400px);
+    left: calc(50% - 300px);
+
+    width: 600px;
+    height: 700px;
+
+    background-color: white;
+
+    box-shadow: 0px 1px 5px rgba(0,0,0,.3);
+  }
+</style>
+
+<canvas class="main-canvas" id="canvas" width="600" height="700"></canvas>
+
+
+<script>
+  var canvas = document.querySelector('.main-canvas');
+
+  var createWindow = function (id, posX, posY, width, height, title) {
+    var canvas = document.getElementById(id);
+    var ctx = canvas.getContext('2d');
+
+    var minHeight = 31;
+    height = Math.max(height, minHeight);
+
+    ctx.fillStyle = 'rgb(222, 225, 230)';
+    ctx.fillRect(posX, posY, width, height);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(posX + 1, posY + 30, width - 2, height - 31);
+
+    ctx.beginPath();
+    // "-" (hide) buttons
+    ctx.moveTo(posX + width - 75 + 14, posY + 17.5);
+    ctx.lineTo(posX + width - 75 + 26, posY + 17.5);
+
+    // "X" (remove) buttons - \
+    ctx.moveTo(posX + width - 40 + 15, posY + 10);
+    ctx.lineTo(posX + width - 40 + 25, posY + 20);
+
+    // "X" (remove) buttons - /
+    ctx.moveTo(posX + width - 40 + 25, posY + 10);
+    ctx.lineTo(posX + width - 40 + 15, posY + 20);
+
+    ctx.stroke();
+
+
+    ctx.font = 'lighter 12px/1 "Noto Sans KR"';
+    ctx.strokeText(title, posX + 9,  posY + 20);
+  };
+  createWindow('canvas', 50, 50, 200, 150, 'Main Window 1');
+  createWindow('canvas', 300, 120, 250, 120, 'Main Window 2');
+
+
+
+  var drawCircledRect = function (id, posX, posY, width, height, radius) {
+    var canvas = document.getElementById(id);
+    var ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#1e88e5';
+
+    ctx.beginPath();
+    ctx.arc(posX + radius, posY + radius, radius, 0, 2 * Math.PI, false);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(posX + radius, posY + height - radius, radius, 0, 2 * Math.PI, false);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(posX + width - radius, posY + radius, radius, 0, 2 * Math.PI, false);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(posX + width - radius, posY + height - radius, radius, 0, 2 * Math.PI, false);
+    ctx.fill();
+
+    ctx.fillRect(posX, posY + radius, width, height - radius * 2);
+    ctx.fillRect(posX + radius, posY, width - radius * 2, height);
+  }
+
+  var createTextboxNButton = function (id, posX, posY, width, height, radius, text, fontFamily, fontSize) {
+    var canvas = document.getElementById(id);
+    var ctx = canvas.getContext('2d');
+
+    drawCircledRect(id, posX, posY, width, height, radius);
+
+    ctx.textAlign = 'center';
+    ctx.strokeStyle = '#ffffff';
+    ctx.font = 'lighter ' + fontSize + 'px/1 "' + fontFamily + '"';
+    ctx.strokeText(text, posX + (width / 2), posY + (height / 2) + (fontSize / 2) - 2)
+  };
+  createTextboxNButton('canvas', 370, 30, 200, 40, 0, 'Small Font Text Box 1', 'Noto Sans KR', 13);
+  createTextboxNButton('canvas', 350, 280, 200, 40, 0, 'Long Text Box 2', 'Noto Sans KR', 15);
+
+  createTextboxNButton('canvas', 50, 240, 150, 40, 8, 'Button 1', 'Noto Sans KR', 14);
+  createTextboxNButton('canvas', 80, 360, 150, 40, 8, 'Button 2', 'Noto Sans KR', 14);
+
+
+
+  var createMenu = function (id, posX, posY, width, height, title, menuList) {
+    menuList = menuList || [];
+
+    var canvas = document.getElementById(id);
+    var ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#009688';
+    ctx.fillRect(posX, posY, width, height * (1 + menuList.length));
+
+    ctx.textAlign = 'center';
+    ctx.strokeStyle = '#ffffff';
+    ctx.font = 'lighter 12px/1 "Noto Sans KR"';
+
+    ctx.strokeText(title, posX + (width / 2), posY + (height / 2) + 6 - 2);
+
+    menuList.forEach(function (submenu, idx) {
+      ctx.strokeText(submenu, posX + (width / 2), posY + (height / 2) + (height * (idx + 1)) + 6 - 2);
+    });
+  };
+  createMenu('canvas', 300, 400, 150, 30, 'Menu', ['sub menu 1', 'sub menu 2', 'sub menu 3']);
+
+</script>
+
+</body>
+
+</html>

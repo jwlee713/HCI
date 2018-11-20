@@ -1,0 +1,307 @@
+<!Doctype html>
+<html>
+
+<head>
+  <title>2013210033 - LJW</title>
+  <link href="https://unpkg.com/ionicons@4.4.6/dist/css/ionicons.min.css" rel="stylesheet">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.11/lodash.min.js"></script>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    *, *:focus, *:active {
+      outline: none;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+
+      margin: 0px;
+      padding: 0px;
+
+      background-color: #f7f7f7;
+    }
+  </style>
+</head>
+
+<!--
+  1-2 Implement a tree data structure using Javascript.
+
+  A. Tree data structure should be a tree of simple nodes
+     with id number, arbitary number of children.
+
+  B. Set of basic methods/procedures such as:
+     create_root, add_node, delete_node, search_node, etc.
+
+  C. Extend the node structure to contain a graphic element
+     like a window, line, label, renctangle, point, etc.
+     We will call these "graphic nodes".
+     Different graphic elements will need different attributes
+     (only include the very basic ones).
+
+     A. Modify the tree ADT so that the graphic nodes can be managed
+        and one can create/add/delete/search different types
+        of graphic nodes.
+
+     B. Be able to render the graphic elements in the whole tree.
+
+     C. Write a short program to demonstrate you can construct
+        a tree with graphic nodes and render them
+        on the web browser canvas.
+-->
+<body>
+
+<style>
+  .main-canvas {
+    float: left;
+
+    width: 400px;
+    height: 500px;
+
+    margin: 30px 30px 0px 0px;
+
+    background-color: white;
+
+    box-shadow: 0px 1px 5px rgba(0,0,0,.3);
+  }
+</style>
+<canvas class="main-canvas" id="canvas" width="400" height="500"></canvas>
+
+
+<canvas class="main-canvas" id="new-canvas" width="400" height="500"></canvas>
+  
+
+
+<script>
+  /*
+    ABSTRACT TREE DATA STRUCTURE
+    node: {
+      id: 'number',
+      data: 'object contain node data',
+      children: 'array of child nodes',
+    }
+  */
+
+  var cnt = 0;
+  var create_root = function () {
+    return {
+      id: cnt++,
+      data: {},
+      children: [],
+    };
+  };
+
+  var add_node = function (node, parentId, data) {
+    if (typeof node !== 'object') return;
+    if (typeof parentId !== 'number') return;
+    if (typeof data === 'undefined') return;
+
+    if (node.id === parentId) {
+      var newChild = {
+        id: cnt++,
+        data: data,
+        children: [],
+      };
+
+      node.children.push(newChild);
+
+      return newChild.id;
+    }
+
+    var newNodeId = null;
+    node.children.forEach(function (child) {
+      newNodeId = add_node(child, parentId, data) || newNodeId;
+    });
+    return newNodeId;
+  };
+
+  var delete_node = function (node, nodeId) {
+    if (typeof node !== 'object') return;
+    if (typeof nodeId !== 'number') return;
+
+    node.children.forEach(function (child, idx) {
+      if (child.id === nodeId) {
+        node.children[idx] = undefined;
+        return;
+      }
+      delete_node(child, nodeId);
+    });
+
+    node.children = _.compact(node.children);
+  };
+
+  var search_node = function (node, key, value) {
+    if (typeof node !== 'object') return;
+    if (typeof key !== 'string') return;
+    if (typeof value === 'undefined') return;
+
+    var result = [];
+
+    if (node.data[key] === value) result.push(node);
+
+    node.children.forEach(function (child) {
+      result.push(search_node(child, key, value));
+    });
+
+    result = _.flatten(result);
+
+    return result;
+  };
+
+
+  var createWindow = function (id, posX, posY, width, height, title) {
+    var canvas = document.getElementById(id);
+    var ctx = canvas.getContext('2d');
+
+    var minHeight = 31;
+    height = Math.max(height, minHeight);
+
+    ctx.fillStyle = 'rgb(222, 225, 230)';
+    ctx.fillRect(posX, posY, width, height);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(posX + 1, posY + 30, width - 2, height - 31);
+
+    ctx.beginPath();
+    // "-" (hide) buttons
+    ctx.moveTo(posX + width - 75 + 14, posY + 17.5);
+    ctx.lineTo(posX + width - 75 + 26, posY + 17.5);
+
+    // "X" (remove) buttons - \
+    ctx.moveTo(posX + width - 40 + 15, posY + 10);
+    ctx.lineTo(posX + width - 40 + 25, posY + 20);
+
+    // "X" (remove) buttons - /
+    ctx.moveTo(posX + width - 40 + 25, posY + 10);
+    ctx.lineTo(posX + width - 40 + 15, posY + 20);
+
+    ctx.stroke();
+
+
+    ctx.font = 'lighter 12px/1';
+    ctx.strokeText(title, posX + 9,  posY + 20);
+  };
+
+  var drawCircledRect = function (id, posX, posY, width, height, radius, color) {
+    var canvas = document.getElementById(id);
+    var ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = color;
+
+    ctx.beginPath();
+    ctx.arc(posX + radius, posY + radius, radius, 0, 2 * Math.PI, false);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(posX + radius, posY + height - radius, radius, 0, 2 * Math.PI, false);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(posX + width - radius, posY + radius, radius, 0, 2 * Math.PI, false);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(posX + width - radius, posY + height - radius, radius, 0, 2 * Math.PI, false);
+    ctx.fill();
+
+    ctx.fillRect(posX, posY + radius, width, height - radius * 2);
+    ctx.fillRect(posX + radius, posY, width - radius * 2, height);
+  };
+
+
+  var createPoint = function (id, posX, posY, radius, color) {
+    var canvas = document.getElementById(id);
+    var ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = color;
+
+    ctx.beginPath();
+    ctx.arc(posX, posY, radius, 0, 2 * Math.PI, false);
+    ctx.fill();
+
+  }
+
+  var createLabel = function (id, posX, posY, text, textAlign, color) {
+    var canvas = document.getElementById(id);
+    var ctx = canvas.getContext('2d');
+
+    ctx.textAlign = textAlign;
+    ctx.strokeStyle = color;
+    ctx.font = 'lighter 12px/1';
+    ctx.strokeText(text, posX, posY);
+  };
+
+  var createLine = function (id, posX1, posY1, posX2, posY2, width, color) {
+    var canvas = document.getElementById(id);
+    var ctx = canvas.getContext('2d');
+
+    ctx.lineWidth = width;
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(posX1, posY1);
+    ctx.lineTo(posX2, posY2);
+    ctx.stroke();
+  };
+
+
+  var draw_tree = function (id, node) {
+    if (typeof id !== 'string') return;
+    if (typeof node !== 'object') return;
+
+    var data = node.data;
+
+    switch (data.type) {
+      case 'window':
+        createWindow(id, data.x, data.y, data.w, data.h, data.text);
+        break;
+
+      case 'point':
+        createPoint(id, data.x, data.y, data.radius, data.color);
+        break;
+
+      case 'line':
+        createLine(id, data.x1, data.y1, data.x2, data.y2, data.w, data.color);
+        break;
+
+      case 'rect':
+        drawCircledRect(id, data.x, data.y, data.w, data.h, data.radius, data.color);
+        break;
+
+      case 'label':
+        createLabel(id, data.x, data.y, data.text, data.textAlign, data.color);
+        break;
+    };
+
+
+    node.children.forEach(function (child) {
+      draw_tree(id, child);
+    });
+  }
+
+  var tree = create_root();
+  var windowId = add_node(tree, 0, { type: 'window', text: 'My window', w: 300, h: 200, x: 50, y: 50, });
+  var pointId = add_node(tree, windowId, { type: 'point', x: 200, y: 300, radius: 3, color: '#ff9800', });
+  var pointId = add_node(tree, windowId, { type: 'point', x: 300, y: 300, radius: 3, color: '#1e88e5', });
+  var lineId = add_node(tree, windowId, { type: 'line', x1: 350, y1: 70, x2: 380, y2: 100, w: 2, color: 'black', });
+  var rectId = add_node(tree, windowId, { type: 'rect', w: 100, h: 50, x: 150, y: 350, radius: 5, color: '#1e88e5', });
+  var labelId = add_node(tree, rectId, { type: 'label', text: 'My Label', x: 200, y: 380, textAlign: 'center', color: 'red'});
+  var labelId = add_node(tree, rectId, { type: 'label', text: 'Before Remove Blue Elements', x: 30, y: 470, textAlign: 'left', color: '#1e88e5'});
+
+  draw_tree('canvas', tree);
+
+  var blueNodes = search_node(tree, 'color', '#1e88e5');
+  blueNodes.forEach(function (blueNode) {
+    delete_node(tree, blueNode.id);
+  });
+
+  draw_tree('new-canvas', tree);
+
+  // delete_node(tree, rectId);
+
+</script>
+</body>
+
+
+
+</html>
