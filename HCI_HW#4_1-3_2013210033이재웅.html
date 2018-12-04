@@ -1,0 +1,321 @@
+<!Doctype html>
+<html>
+
+<head>
+  <title>2013210033 - LJW</title>
+  <link href="https://unpkg.com/ionicons@4.4.6/dist/css/ionicons.min.css" rel="stylesheet">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.11/lodash.min.js"></script>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    *, *:focus, *:active {
+      outline: none;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+
+      margin: 0px;
+      padding: 0px;
+
+      background-color: #f7f7f7;
+    }
+  </style>
+</head>
+
+<!--
+  Further extend the tree-graphics program in the following way.
+  Write and demonstrate a routime that takes a mouse input
+  and identifies the object that is clicked.
+  (e.g. print message or highlight the object, see below).
+  If there are multiple objects that correspond to the location
+  of mouse click, the lowest in the tree must be idendified.
+  In order to do this, one will have to define the rectangular area
+  dimension of the GUI object (see figure next page).
+  When there are multiple overlapping GUI objects,
+  the lowest level object should be the one selected.
+  Also note that the objects are now interactable.
+-->
+<body>
+
+<style>
+  .main-canvas {
+    float: left;
+
+    width: 400px;
+    height: 500px;
+
+    margin: 30px;
+
+    background-color: white;
+
+    box-shadow: 0px 1px 5px rgba(0,0,0,.3);
+  }
+</style>
+<canvas class="main-canvas" id="canvas" width="400" height="500"></canvas>
+  
+
+
+<script>
+  /*
+    ABSTRACT TREE DATA STRUCTURE
+    node: {
+      id: 'number',
+      data: 'object contain node data',
+      children: 'array of child nodes',
+    }
+  */
+
+  var cnt = 0;
+  var create_root = function () {
+    return {
+      id: cnt++,
+      data: {},
+      children: [],
+    };
+  };
+
+  var add_node = function (node, parentId, data) {
+    if (typeof node !== 'object') return;
+    if (typeof parentId !== 'number') return;
+    if (typeof data === 'undefined') return;
+
+    if (node.id === parentId) {
+      var newChild = {
+        id: cnt++,
+        data: data,
+        children: [],
+      };
+
+      node.children.push(newChild);
+
+      return newChild.id;
+    }
+
+    var newNodeId = null;
+    node.children.forEach(function (child) {
+      newNodeId = add_node(child, parentId, data) || newNodeId;
+    });
+    return newNodeId;
+  };
+
+  var delete_node = function (node, nodeId) {
+    if (typeof node !== 'object') return;
+    if (typeof nodeId !== 'number') return;
+
+    node.children.forEach(function (child, idx) {
+      if (child.id === nodeId) {
+        node.children[idx] = undefined;
+        return;
+      }
+      delete_node(child, nodeId);
+    });
+
+    node.children = _.compact(node.children);
+  };
+
+  var search_node = function (node, key, value) {
+    if (typeof node !== 'object') return;
+    if (typeof key !== 'string') return;
+    if (typeof value === 'undefined') return;
+
+    var result = [];
+
+    if (node.data[key] === value) result.push(node);
+
+    node.children.forEach(function (child) {
+      result.push(search_node(child, key, value));
+    });
+
+    result = _.flatten(result);
+
+    return result;
+  };
+
+
+  var createArea = function (id, posX, posY, width, height, highlight) {
+    posX += 0.5;
+    posY += 0.5;
+
+    var canvas = document.getElementById(id);
+    var ctx = canvas.getContext('2d');
+
+    ctx.strokeStyle = (highlight ? '#ff9800' : 'black');
+    ctx.lineWidth = (highlight ? 3 : 1);
+    ctx.strokeRect(posX, posY, width, height);
+
+    ctx.lineWidth = 1;
+  };
+
+  var createRect = function (id, posX, posY, width, height, color, highlight) {
+    posX += 0.5;
+    posY += 0.5;
+
+    var canvas = document.getElementById(id);
+    var ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = color;
+    ctx.fillRect(posX, posY, width, height);
+
+    ctx.strokeStyle = (highlight ? '#ff9800' : 'black');
+    ctx.lineWidth = (highlight ? 3 : 1);
+    ctx.strokeRect(posX, posY, width, height);
+
+    ctx.lineWidth = 1;
+  };
+
+
+  var createEllipse = function (id, posX, posY, width, height, color, highlight) {
+    posX += 0.5;
+    posY += 0.5;
+
+    var canvas = document.getElementById(id);
+    var ctx = canvas.getContext('2d');
+
+    ctx.strokeStyle = 'rgba(0,0,0,.4)';
+    ctx.setLineDash([3, 3]);
+    ctx.strokeRect(posX, posY, width, height);
+
+    ctx.strokeStyle = (highlight ? '#ff9800' : 'black');
+    ctx.lineWidth = (highlight ? 3 : 1);
+    ctx.beginPath();
+    ctx.setLineDash([]);
+    ctx.ellipse(posX + width / 2, posY + height / 2, width / 2, height / 2, 0, 0, 2 * Math.PI);
+    ctx.stroke();
+
+    ctx.lineWidth = 1;
+  };
+
+  var createTriangle = function (id, posX, posY, width, height, highlight) {
+    posX += 0.5;
+    posY += 0.5;
+
+    var canvas = document.getElementById(id);
+    var ctx = canvas.getContext('2d');
+
+    ctx.strokeStyle = 'rgba(0,0,0,.4)';
+    ctx.setLineDash([3, 3]);
+    ctx.strokeRect(posX, posY, width, height);
+
+    ctx.strokeStyle = (highlight ? '#ff9800' : 'black');
+    ctx.lineWidth = (highlight ? 3 : 1);
+
+    ctx.beginPath();
+    ctx.setLineDash([]);
+    ctx.moveTo(posX + width / 2, posY);
+    ctx.lineTo(posX + width, posY + height);
+    ctx.lineTo(posX, posY + height);
+    ctx.lineTo(posX + width / 2, posY);
+
+    ctx.stroke();
+
+    ctx.lineWidth = 1;
+  };
+
+
+  var draw_tree = function (id, node, x, y) {
+    x = x || 0;
+    y = y || 0;
+  
+    if (typeof id !== 'string') return;
+    if (typeof node !== 'object') return;
+
+    var data = node.data;
+
+    switch (data.type) {
+      case 'area':
+        createArea(id, x + data.x, y + data.y, data.w, data.h, data.selected);
+        break;
+
+      case 'rect':
+        createRect(id, x + data.x, y + data.y, data.w, data.h, data.color, data.selected);
+        break;
+
+      case 'ellipse':
+        createEllipse(id, x + data.x, y + data.y, data.w, data.h, data.color, data.selected);
+        break;
+
+      case 'triangle':
+        createTriangle(id, x + data.x, y + data.y, data.w, data.h, data.selected);
+        break;
+    };
+
+    node.children.forEach(function (child) {
+      draw_tree(id, child, x + data.x, y + data.y);
+    });
+  }
+
+  var tree = create_root();
+  var areaId = add_node(tree, 0, { type: 'area', w: 300, h: 350, x: 50, y: 50, });
+  var rect1Id = add_node(tree, areaId, { type: 'rect', w: 100, h: 50, x: 20, y: 30, color: '#dddddd', });
+
+  var rect2Id = add_node(tree, rect1Id, { type: 'rect', w: 50, h: 10, x: 20, y: 30, color: '#b1d2ef', });
+
+  var rect3Id = add_node(tree, areaId, { type: 'rect', w: 100, h: 100, x: 150, y: 50, color: '#dddddd', });
+  var el3Id = add_node(tree, rect3Id, { type: 'ellipse', w: 60, h: 40, x: 20, y: 30, });
+
+  var rect4Id = add_node(tree, areaId, { type: 'rect', w: 150, h: 100, x: 60, y: 200, color: '#ddddff', });
+  var tri1Id = add_node(tree, rect4Id, { type: 'triangle', w: 40, h: 34, x: 20, y: 33, });
+  var tri2Id = add_node(tree, rect4Id, { type: 'triangle', w: 40, h: 50, x: 90, y: 25, });
+
+  draw_tree('canvas', tree);
+
+  var clearCanvas = function (id) {
+    var canvas = document.getElementById(id);
+    var ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+
+  var deselectObject = function (node) {
+    if (typeof node !== 'object') return;
+
+    node.data.selected = false;
+    node.children.forEach(function (child) {
+      deselectObject(child);
+    });
+  };
+
+  var selectObject = function (node, clickedX, clickedY) {
+    if (typeof node !== 'object') return;
+
+    var data = node.data;
+    data.x = data.x || 0;
+    data.y = data.y || 0;
+    data.w = data.w || 0;
+    data.h = data.h || 0;
+
+    var selected = false;
+    node.children.forEach(function (child) {
+      selected = selected || selectObject(child, clickedX - data.x, clickedY - data.y);
+    });
+
+    if (selected) return true;
+
+    if (clickedX < data.x || clickedX > data.x + data.w) return false;
+    if (clickedY < data.y || clickedY > data.y + data.h) return false;
+
+    data.selected = true;
+
+    return true;
+  };
+
+
+  $('#canvas').on('click', function (e) {
+    var clickedX = e.offsetX;
+    var clickedY = e.offsetY;
+
+    deselectObject(tree);
+    selectObject(tree, clickedX, clickedY);
+
+    clearCanvas('canvas');
+    draw_tree('canvas', tree);
+  });
+
+</script>
+</body>
+
+
+
+</html>
